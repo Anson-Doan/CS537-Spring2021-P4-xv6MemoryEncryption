@@ -117,7 +117,7 @@ int sys_getpgtable(void) {
   if(argptr(0, (char**)&entries, num*sizeof(struct pt_entry)) < 0){
     return -1;
   }
-  return getpgtable(entries, num);
+  return getpgtable(entries, num, 1);
 }
 
 

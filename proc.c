@@ -12,6 +12,18 @@ struct {
   struct proc proc[NPROC];
 } ptable;
 
+
+// Info about pages in array
+struct {
+    int head;
+    int tail;
+    char* vpn; // page number of that page
+} PageData; 
+
+// Array that holds pointers to page data
+struct PageData* clock_queue[CLOCKSIZE];
+
+
 static struct proc *initproc;
 
 int nextpid = 1;
@@ -75,6 +87,9 @@ allocproc(void)
 {
   struct proc *p;
   char *sp;
+
+  //clock queue testing
+  //cprintf("data: %d", clock_queue[0]->data);
 
   acquire(&ptable.lock);
 
