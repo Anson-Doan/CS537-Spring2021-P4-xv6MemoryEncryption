@@ -166,7 +166,7 @@ growproc(int n)
     if((sz = allocuvm(curproc->pgdir, sz, sz + n)) == 0) {
 
         // Encrypt the heap, size of newly alloced - original size
-        mencrypt(curproc->kstack, (sz - curproc->sz) / PGSIZE );
+        mencrypt((char*)sz, n / PGSIZE);
 
       return -1;
     }
