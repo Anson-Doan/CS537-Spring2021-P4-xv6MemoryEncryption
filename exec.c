@@ -19,14 +19,23 @@ exec(char *path, char **argv)  // Create queue and clear it out right here.
   pde_t *pgdir, *oldpgdir;
   struct proc *curproc = myproc();
 
+  curproc->q_head = 0;
+  //curproc->q_tail = 0;
+  curproc->q_count = 0;
 
-  // Initialize all fields of clock_queue to 0
-  for (int j = 0; j < CLOCKSIZE - 1; j++ ){
-    curproc->clock_queue->head = 0;
-    curproc->clock_queue->tail = 0;
-    curproc->clock_queue->next = 0;
-    curproc->clock_queue->vpn = 0;
-}
+  // Initialize all fields of clock_queue to 0 (clear)
+  int j;
+  for (j = 0; j < CLOCKSIZE - 1; j++ ){
+    curproc->clock_queue[j].next = &curproc->clock_queue[j+1];
+    curproc->clock_queue[j].is_full = 0;
+    curproc->clock_queue[j].va = 0;
+  }
+  j = CLOCKSIZE - 1;
+  curproc->clock_queue[j].next = &curproc->clock_queue[0];
+  curproc->clock_queue[j].is_full = 0;
+  curproc->clock_queue[j].va = 0;
+
+
 
 
   begin_op();
@@ -116,6 +125,8 @@ exec(char *path, char **argv)  // Create queue and clear it out right here.
   switchuvm(curproc);
   freevm(oldpgdir);
 
+
+  // Encrypt the memory!
   for (int i = 0; i < sz/PGSIZE; i++) {
     mencrypt((char*) 0 + i*PGSIZE, 1);
   }

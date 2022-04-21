@@ -170,7 +170,7 @@ growproc(int n)
   if(n > 0){
     if((sz = allocuvm(curproc->pgdir, sz, sz + n)) == 0) {
 
-
+      mencrypt((void *)curproc->sz - n, PGROUNDUP(n)/PGSIZE);
       return -1;
     }
   } else if(n < 0){
@@ -181,7 +181,7 @@ growproc(int n)
   curproc->sz = sz;
   switchuvm(curproc);
   // Encrypt the heap, size of newly alloced - original size
-  mencrypt((char*)sz, n / PGSIZE);
+  //mencrypt((char*)sz, n / PGSIZE);
   return 0;
 }
 

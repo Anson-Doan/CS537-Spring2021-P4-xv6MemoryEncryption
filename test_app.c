@@ -9,13 +9,15 @@
     
 int main(int argc, char *argv[])
 {
-//   printf(1, "My first xv6 program learnt at GFG\n");
-
 
     char *ptr = sbrk(PGSIZE); // Allocate one page
-    mencrypt(ptr, 1); // Encrypt the pages
     struct pt_entry pt_entry; 
-    getpgtable(&pt_entry, 1, 1); // Get the page table information for newly allocated page
+    // Get the page table information for newly allocated page
+    // and the page should be encrypted at this point
+    getpgtable(&pt_entry, 1, 0); 
+    ptr[0] = 0x0;
+    // The page should now be decrypted and put into the clock queue
+    getpgtable(&pt_entry, 1, 1); 
 
   //exit();
 }

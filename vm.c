@@ -423,6 +423,15 @@ char* translate_and_set(pde_t *pgdir, char *uva) {
 
 
 int mdecrypt(char *virtual_addr) {
+
+  //TODO: this is called when a new page is accessed.
+  // The page needs to be added to the queue here
+
+  // After the page is decrypted, check which page needs to be evicted in queue, and add new page to it
+
+  // AND the bit you’re looking for with the pte entry and do some logic checking - to check bits
+
+
   cprintf("p4Debug:  mdecrypt VPN %d, %p, pid %d\n", PPN(virtual_addr), virtual_addr, myproc()->pid);
   //p4Debug: virtual_addr is a virtual address in this PID's userspace.
   struct proc * p = myproc();
@@ -451,10 +460,103 @@ int mdecrypt(char *virtual_addr) {
     *slider = *slider ^ 0xFF;
     slider++;
   }
+
+
+
+  // PTE_A is set when a page is accessed.
+  //
+
+  // need to check if the array is full or not. And if to evict a page or not.
+
+    // iterate queue and find an empty spot for the page
+    int i;
+    for (i = 0; i < CLOCKSIZE; i++) {
+
+      // Need to check that PTE_E is true (page is encrypted) and PTE_P is false (page not in queue yet). 
+
+      //if queue has an empty spot, add it.
+      if (!(p->clock_queue[i].is_full)) {
+
+          p->clock_queue[i].va = virtual_addr; // Set the virtal address
+
+
+          /*if (p->clock_queue[i].next->is_full == 0 || i == CLOCKSIZE - 1) {
+            p->q_tail = i;
+          }//*/
+          p->clock_queue[i].is_full = 1;
+
+          p->q_count++;
+          i = -1;
+          break; // empty spot was filled so break the loop
+      }
+  }
+
+  // If the Queue is full, now need to iterate through the pages and check if the PTE_A bit = 0
+
+  if (i != -1) {// For loop goes here
+    i = 0;
+
+    //for (i = 0; i < CLOCKSIZE; i++) {
+    while (i != -1) {
+
+      pte_t * curr_pte = walkpgdir(mypd, p->clock_queue[p->q_head].va, 0);
+
+      if (!(*curr_pte & PTE_A) && p->clock_queue[p->q_head].is_full) {
+
+        cprintf("PTE BIT IS SET  \n");
+
+        //Eviction code
+        mencrypt(p->clock_queue[p->q_head].va, 1);
+        *curr_pte = *curr_pte | PTE_E;
+        *curr_pte = *curr_pte & ~PTE_A;
+        *curr_pte = *curr_pte & ~PTE_P;
+
+        // New node
+         p->clock_queue[p->q_head].va = virtual_addr; // Set the virtal address
+
+        i = -1;
+        break;
+      } else {
+        /*char * temp_va = p->clock_queue[p->q_head].va;
+        for (int k = 0; k < CLOCKSIZE - 1; k++) {
+          p->clock_queue[p->q_head].va = p->clock_queue[p->q_head].next->va;
+        }
+        p->clock_queue[p->q_tail].va = temp_va;//*/
+        p->q_head++;
+        if (p->q_head >= CLOCKSIZE) {
+          p->q_head = 0;
+        }
+      }
+    }
+  }
+
+
+  // Print statements to see what is in the array.
+
+  // cprintf("node 0 --- va: %p\n", p->clock_queue[0].va);
+  // cprintf("node 1 --- va: %p\n", p->clock_queue[1].va);
+  // cprintf("node 2 --- va: %p\n", p->clock_queue[2].va);
+  // cprintf("node 3 --- va: %p\n", p->clock_queue[3].va);
+  // cprintf("node 4 --- va: %p\n", p->clock_queue[4].va);
+  // cprintf("node 5 --- va: %p\n", p->clock_queue[6].va);
+  // cprintf("node 6 --- va: %p\n", p->clock_queue[6].va);
+  // cprintf("node 7 --- va: %p\n", p->clock_queue[7].va);
+  
+
+  //else, iterate through and find a page with PTE_A = 0. Evict that page. Add new page in same spot
+  // for (int i = 0; i < proc->clock_queue; i++) {
+
+  //     //if queue has an empty spot, add it.
+  //     if (proc->clock_queue[i].PTE_A == 0) {
+  //         proc->clock_queue[i].vpn = 100; // Set the page address, check mmu.h
+  //     }
+  // }
+
   return 0;
 }
 
-int mencrypt(char *virtual_addr, int len) {
+int mencrypt(char *virtual_addr, int len) { //TODO: 
+
   cprintf("p4Debug: mencrypt: %p %d\n", virtual_addr, len);
   //the given pointer is a virtual address in this pid's userspace
   struct proc * p = myproc();
@@ -502,18 +604,26 @@ int mencrypt(char *virtual_addr, int len) {
     }
   }
 
+  // TODO: need to set ref bit to 0 in mencrypt - helps pass tests
+
+  // TODO: A page is evicted when mencrypt is called? Or do you call mencrypt when evicting, where?
+
   switchuvm(myproc());
   return 0;
 }
 
+int not_in_queue(uint uva) {
+  struct proc * p = myproc();
+  for (int i = 0; i < CLOCKSIZE; i++) {
+    if (V2P(p->clock_queue[i].va) == V2P(uva)) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
 int getpgtable(struct pt_entry* pt_entries, int num, int wsetOnly) {
   cprintf("p4Debug: getpgtable: %p, %d\n", pt_entries, num);
-
-
-  //
-  // if (wsetOnly &&  NOT-in-QUEUE(curproc->head, pte)) {
-  //   continue;
-  // }
 
   struct proc *curproc = myproc();
   pde_t *pgdir = curproc->pgdir;
@@ -531,6 +641,10 @@ int getpgtable(struct pt_entry* pt_entries, int num, int wsetOnly) {
 
     if (!(*pte & PTE_U) || !(*pte & (PTE_P | PTE_E)))
       continue;
+    
+    if (wsetOnly && !(*pte & PTE_P)) {
+      continue;
+    }
 
     pt_entries[i].pdx = PDX(uva);
     pt_entries[i].ptx = PTX(uva);
