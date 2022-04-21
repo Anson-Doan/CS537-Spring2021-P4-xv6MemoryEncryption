@@ -34,6 +34,15 @@ struct context {
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+// Node that contains info to iterate through queue, as well
+// as the pages vpn
+struct Node {
+    int head;
+    int tail;
+    struct Node* next;
+    char* vpn; // address of that page
+}; 
+
 // Per-process state
 struct proc {
   uint sz;                     // Size of process memory (bytes)
@@ -49,6 +58,7 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  struct Node clock_queue[CLOCKSIZE];    // Array of Node structs
 };
 
 // Process memory is laid out contiguously, low addresses first:

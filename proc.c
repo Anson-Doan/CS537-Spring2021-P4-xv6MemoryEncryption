@@ -13,17 +13,6 @@ struct {
 } ptable;
 
 
-// Info about pages in array
-struct {
-    int head;
-    int tail;
-    char* vpn; // page number of that page
-} PageData; 
-
-// Array that holds pointers to page data
-struct PageData* clock_queue[CLOCKSIZE];
-
-
 static struct proc *initproc;
 
 int nextpid = 1;
@@ -89,7 +78,7 @@ allocproc(void)
   char *sp;
 
   //clock queue testing
-  //cprintf("data: %d", clock_queue[0]->data);
+  //cprintf("clock queue:%p\n", clock_queue[0]);
 
   acquire(&ptable.lock);
 
@@ -139,6 +128,7 @@ userinit(void)
   extern char _binary_initcode_start[], _binary_initcode_size[];
 
   p = allocproc();
+
   
   initproc = p;
   if((p->pgdir = setupkvm()) == 0)
@@ -180,8 +170,6 @@ growproc(int n)
   if(n > 0){
     if((sz = allocuvm(curproc->pgdir, sz, sz + n)) == 0) {
 
-        // Encrypt the heap, size of newly alloced - original size
-        mencrypt((char*)sz, n / PGSIZE);
 
       return -1;
     }
@@ -192,6 +180,8 @@ growproc(int n)
 
   curproc->sz = sz;
   switchuvm(curproc);
+  // Encrypt the heap, size of newly alloced - original size
+  mencrypt((char*)sz, n / PGSIZE);
   return 0;
 }
 
@@ -199,7 +189,7 @@ growproc(int n)
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
 int
-fork(void)
+fork(void) //TODO: create and clear out queue, deep copy over parent’s queue to this process
 {
   int i, pid;
   struct proc *np;

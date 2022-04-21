@@ -8,7 +8,7 @@
 #include "elf.h"
 
 int
-exec(char *path, char **argv)
+exec(char *path, char **argv)  // Create queue and clear it out right here.
 {
   char *s, *last;
   int i, off;
@@ -18,6 +18,16 @@ exec(char *path, char **argv)
   struct proghdr ph;
   pde_t *pgdir, *oldpgdir;
   struct proc *curproc = myproc();
+
+
+  // Initialize all fields of clock_queue to 0
+  for (int j = 0; j < CLOCKSIZE - 1; j++ ){
+    curproc->clock_queue->head = 0;
+    curproc->clock_queue->tail = 0;
+    curproc->clock_queue->next = 0;
+    curproc->clock_queue->vpn = 0;
+}
+
 
   begin_op();
 
@@ -65,20 +75,11 @@ exec(char *path, char **argv)
 
   sz = PGROUNDUP(sz); // This points to the top of the data and text part of memory
 
-  // need to encrypt data and text, from va 0 to the guard page
-  //mencrypt((char*) 0, sz / PGSIZE);
-
 
   if((sz = allocuvm(pgdir, sz, sz + 2*PGSIZE)) == 0)
     goto bad;
   clearpteu(pgdir, (char*)(sz - 2*PGSIZE));
   sp = sz; 
-
-
-
-
-
-
 
 
   // Push argument strings, prepare rest of stack in ustack.
@@ -106,8 +107,6 @@ exec(char *path, char **argv)
       last = s+1;
   safestrcpy(curproc->name, last, sizeof(curproc->name));
 
-
-
   // Commit to the user image.
   oldpgdir = curproc->pgdir;
   curproc->pgdir = pgdir;
@@ -117,13 +116,9 @@ exec(char *path, char **argv)
   switchuvm(curproc);
   freevm(oldpgdir);
 
-
-
-  cprintf("pointer: %p page: %d\n", sz, sz/PGSIZE);
   for (int i = 0; i < sz/PGSIZE; i++) {
     mencrypt((char*) 0 + i*PGSIZE, 1);
   }
-
 
   return 0;
 
