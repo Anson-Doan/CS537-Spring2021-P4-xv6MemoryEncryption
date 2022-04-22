@@ -36,8 +36,6 @@ exec(char *path, char **argv)  // Create queue and clear it out right here.
   curproc->clock_queue[j].va = 0;
 
 
-
-
   begin_op();
 
   if((ip = namei(path)) == 0){
