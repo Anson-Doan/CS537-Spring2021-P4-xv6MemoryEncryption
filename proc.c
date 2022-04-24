@@ -173,14 +173,37 @@ growproc(int n)
     }
     mencrypt((void *)curproc->sz, PGROUNDUP(n)/PGSIZE);
 
-  } else if(n < 0){
-    if((sz = deallocuvm(curproc->pgdir, sz, sz + n)) == 0)
+  } else if(n < 0){ 
+    if((sz = deallocuvm(curproc->pgdir, sz, sz + n)) == 0)      
       return -1;
+    
+    //TODO: Check all virtual addresses, ones greater than sz have been deallocated, so delete them
   }
 
   curproc->sz = sz;
 
+  for (int i = 0; i < CLOCKSIZE; i++) {
+    if (curproc->clock_queue[i].is_full) {
+      if ((uint)curproc->clock_queue[i].va >= curproc->sz) {
+        //Encrypt
+        mencrypt(curproc->clock_queue[i].va, 1);
+        //Evict
+        for (int j = i; j < CLOCKSIZE - 1; j++) {
+          curproc->clock_queue[j].va = curproc->clock_queue[j+1].va;
+          curproc->clock_queue[j].is_full = curproc->clock_queue[j+1].is_full;
+          curproc->clock_queue[j].pte = curproc->clock_queue[j+1].pte;
+        }
+        curproc->clock_queue[CLOCKSIZE - 1].va = 0;
+        curproc->clock_queue[CLOCKSIZE - 1].is_full = 0;
+        curproc->clock_queue[CLOCKSIZE - 1].pte = 0;
+        curproc->q_count--;
+        i--;
+      }
+    }
+  }
+
   switchuvm(curproc);
+  
   // Encrypt the heap, size of newly alloced - original size
   //mencrypt((char*)sz, n / PGSIZE);
   return 0;
@@ -190,13 +213,13 @@ growproc(int n)
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
 int
-fork(void) //TODO: create and clear out queue, deep copy over parent’s queue to this process
+fork(void)
 {
   int i, pid;
   struct proc *np;
   struct proc *curproc = myproc();
 
-  // Allocate process.
+    // Allocate process.
   if((np = allocproc()) == 0){
     return -1;
   }
@@ -211,6 +234,26 @@ fork(void) //TODO: create and clear out queue, deep copy over parent’s queue t
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
+
+  // COPT THE QUEUE
+
+  np->q_head = &np->clock_queue[0];
+  np->q_count = curproc->q_count;
+
+  int j;
+  for (j = 0; j < CLOCKSIZE - 1; j++ ){
+    np->clock_queue[j].next = &np->clock_queue[j+1];
+  }
+  j = CLOCKSIZE - 1;
+  np->clock_queue[j].next = &np->clock_queue[0];
+
+  for (i = 0; i < CLOCKSIZE; i++) {
+    np->clock_queue[i].va = curproc->clock_queue[i].va;
+    np->clock_queue[i].is_full = curproc->clock_queue[i].is_full;
+    np->clock_queue[i].pte = curproc->clock_queue[i].pte;
+    
+  }
+
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;

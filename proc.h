@@ -40,6 +40,7 @@ struct Node {
     int is_full;
     struct Node* next;
     char* va; // address of that page
+    pte_t* pte;
 }; 
 
 // Per-process state
@@ -58,7 +59,7 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
   struct Node clock_queue[CLOCKSIZE];    // Array of Node structs
-  int q_head;
+  struct Node * q_head;
   //int q_tail;
   int q_count;
 };

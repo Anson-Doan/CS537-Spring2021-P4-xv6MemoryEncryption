@@ -19,7 +19,7 @@ exec(char *path, char **argv)  // Create queue and clear it out right here.
   pde_t *pgdir, *oldpgdir;
   struct proc *curproc = myproc();
 
-  curproc->q_head = 0;
+  curproc->q_head = &curproc->clock_queue[0];
   //curproc->q_tail = 0;
   curproc->q_count = 0;
 
@@ -29,11 +29,13 @@ exec(char *path, char **argv)  // Create queue and clear it out right here.
     curproc->clock_queue[j].next = &curproc->clock_queue[j+1];
     curproc->clock_queue[j].is_full = 0;
     curproc->clock_queue[j].va = 0;
+    curproc->clock_queue[j].pte = 0;
   }
   j = CLOCKSIZE - 1;
   curproc->clock_queue[j].next = &curproc->clock_queue[0];
   curproc->clock_queue[j].is_full = 0;
   curproc->clock_queue[j].va = 0;
+  curproc->clock_queue[j].pte = 0;
 
 
   begin_op();
