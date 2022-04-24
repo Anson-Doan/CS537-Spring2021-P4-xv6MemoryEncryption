@@ -185,8 +185,7 @@ growproc(int n)
   for (int i = 0; i < CLOCKSIZE; i++) {
     if (curproc->clock_queue[i].is_full) {
       if ((uint)curproc->clock_queue[i].va >= curproc->sz) {
-        //Encrypt
-        mencrypt(curproc->clock_queue[i].va, 1);
+
         //Evict
         for (int j = i; j < CLOCKSIZE - 1; j++) {
           curproc->clock_queue[j].va = curproc->clock_queue[j+1].va;

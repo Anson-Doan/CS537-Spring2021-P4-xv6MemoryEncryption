@@ -475,15 +475,6 @@ void enqueue(char * virtual_addr, struct proc * p, pde_t* mypd) {
 
   }
 
-  // for (int i = 0; i < CLOCKSIZE; i++){
-  //       pte_t *this_pte = p->clock_queue[i].pte;
-  //       int a_bit = 0;
-
-  //   if (*this_pte & PTE_A) {
-  //     a_bit = 1;
-  //   }
-  //   cprintf("node x -- va: %p access: %d\n accessed: ", p->clock_queue[i].va, a_bit);
-  // }
 }
 
 
@@ -498,6 +489,11 @@ int mdecrypt(char *virtual_addr) {
   pde_t* mypd = p->pgdir;
   //set the present bit to true and encrypt bit to false
   pte_t * pte = walkpgdir(mypd, virtual_addr, 0);
+
+
+    cprintf("%d\n", CLOCKSIZE);
+    
+
   if (!pte || *pte == 0) {
     cprintf("p4Debug: walkpgdir failed\n");
     return -1;
@@ -521,26 +517,8 @@ int mdecrypt(char *virtual_addr) {
     *slider = *slider ^ 0xFF;
     slider++;
   }
-
   enqueue(virtual_addr, p, mypd);
-
-
-  // Print statement to see what is in the array.
-
-
-
-  //else, iterate through and find a page with PTE_A = 0. Evict that page. Add new page in same spot
-  // for (int i = 0; i < proc->clock_queue; i++) {
-
-  //     //if queue has an empty spot, add it.
-  //     if (proc->clock_queue[i].PTE_A == 0) {
-  //         proc->clock_queue[i].vpn = 100; // Set the page address, check mmu.h
-  //     }
-  // }
   switchuvm(p);
-
-  
-
   return 0;
 }
 
